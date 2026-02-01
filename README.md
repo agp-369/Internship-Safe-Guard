@@ -4,13 +4,22 @@ Hey, welcome to our project for the **Build4Students Hackathon 2026!**
 
 We built this tool because student scams are getting crazy. You get an email offering $50/hr for "data entry," and next thing you know, your bank account is drained. This app stops that.
 
-**[👉 Live Demo Here](https://share.streamlit.io/your-username/your-repo-name)** (Update this link after you deploy!)
+**[👉 Live Demo Here](https://internshipsafeguard.streamlit.app/)**
 
 ## 📸 Screenshots
-| **Analyze Offer (AI Verdict)** | **Domain Forensics** |
+Here is the tool in action. We use big colored banners so you can see the result instantly!
+
+| **1. High Risk Scam Detected** | **2. Forensic Evidence** |
 |:---:|:---:|
-| ![Verdict](screenshots/verdict.png) | ![Forensics](screenshots/forensics.png) |
-*(Add your screenshots in a `screenshots/` folder to make these appear!)*
+| ![Scam Result](screenshots/Screenshot%202026-02-01%20162923.png) | ![Forensics](screenshots/Screenshot%202026-02-01%20163004.png) |
+
+| **3. Legitimate Domain Check** | **4. Manual Investigation** |
+|:---:|:---:|
+| ![Safe Check](screenshots/Screenshot%202026-02-01%20163022.png) | ![Manual Entry](screenshots/Screenshot%202026-02-01%20163148.png) |
+
+| **5. AI Analysis Report** |
+|:---:|
+| ![Full Report](screenshots/Screenshot%202026-02-01%20163220.png) |
 
 ## What it does
 It's basically a personal cybersecurity analyst.
@@ -19,18 +28,12 @@ It's basically a personal cybersecurity analyst.
 3. We check for keywords like "wire transfer" or "kindly".
 4. Then we ask Google's Gemini AI to look at all the evidence and give you a verdict: Safe or Scam.
 
-## Project Structure
-We organized the code to be clean but also easy to deploy.
-
-* **`backend/`**: Contains the core logic and forensic tools.
-* **`ui/`**: Handles the styling and frontend components.
-* **`streamlit/`**: Contains the **deployment-ready** version of the app (all-in-one file for Streamlit Cloud).
-
 ## How to run it locally
+If you want to mess around with the code:
 
 1. **Clone it:**
    ```bash
-   git clone https://github.com/your-username/Internship-Safe-Guard.git
+   git clone https://github.com/agp-369/Internship-Safe-Guard.git
    cd Internship-Safe-Guard
    ```
 
@@ -45,15 +48,21 @@ We organized the code to be clean but also easy to deploy.
    GOOGLE_API_KEY=your_key_here
    ```
 
-4. **Run the app:**
+4. **Run it:**
    ```bash
    streamlit run streamlit/app.py
    ```
 
+## Project Structure
+We kept it simple so it's easy to deploy.
+* `backend/` - The logic (PDF reading, domain checking).
+* `ui/` - Making it look good (CSS, styling).
+* `streamlit/app.py` - The main brain. This is what we deploy!
+
 ## Tech we used
 * Python (obv)
 * Streamlit (for the frontend)
-* Google Gemini (for the brains)
+* Google Gemini 2.5 Flash (for the brains)
 
 ---
 *Stay safe out there!*
