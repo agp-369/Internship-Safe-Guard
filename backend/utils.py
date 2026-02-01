@@ -34,9 +34,13 @@ def extract_text_from_pdf(file):
 def check_domain_age(url):
     # Figures out how old a website is
     try:
+        # Handle URLs without protocol
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
         domain_match = re.search(r'https?://(?:www\.)?([\w\-.]+)', url)
         if not domain_match:
-            return "Invalid URL", 0
+            return "Invalid URL", None
         domain = domain_match.group(1)
         w = whois.whois(domain)
         creation_date = w.creation_date
@@ -46,12 +50,12 @@ def check_domain_age(url):
             creation_date = creation_date[0]
             
         if not creation_date:
-            return "Unknown", 0
+            return "Unknown", None
             
         age_days = (datetime.now() - creation_date).days
         return creation_date.strftime('%Y-%m-%d'), age_days
     except Exception:
-        return "Hidden/Error", 0
+        return "Hidden/Error", None
 
 def check_company_reputation(company_name):
     # Googles the company to see if people say it's a scam

@@ -6,6 +6,12 @@ We built this tool because student scams are getting crazy. You get an email off
 
 **[👉 Live Demo Here](https://share.streamlit.io/your-username/your-repo-name)** (Update this link after you deploy!)
 
+## 📸 Screenshots
+| **Analyze Offer (AI Verdict)** | **Domain Forensics** |
+|:---:|:---:|
+| ![Verdict](screenshots/verdict.png) | ![Forensics](screenshots/forensics.png) |
+*(Add your screenshots in a `screenshots/` folder to make these appear!)*
+
 ## What it does
 It's basically a personal cybersecurity analyst.
 1. You upload an offer letter or paste a weird URL.

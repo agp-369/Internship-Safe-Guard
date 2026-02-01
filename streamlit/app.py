@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 import os
 from dotenv import load_dotenv
 import re
@@ -9,7 +9,7 @@ from pypdf import PdfReader
 from googlesearch import search
 
 # ==========================================
-# 1. CONFIGURATION & CONSTANTS (From backend/config.py)
+# 1. CONFIGURATION & CONSTANTS
 # ==========================================
 PAGE_TITLE = "Internship Safe-Guard"
 PAGE_ICON = "🛡️"
@@ -17,7 +17,6 @@ THEME_COLOR = "#86AAF9"
 BG_COLOR = "#3d4a69"
 SECONDARY_BG = "#2b3650"
 
-# These are the bad words we look for
 SCAM_KEYWORDS = [
     "kindly", "money order", "check processing", "telegram", "whatsapp", 
     "training fee", "refundable deposit", "google chat interview", 
@@ -25,7 +24,7 @@ SCAM_KEYWORDS = [
 ]
 
 # ==========================================
-# 2. UTILITY FUNCTIONS (From backend/utils.py)
+# 2. UTILITY FUNCTIONS
 # ==========================================
 def scan_for_keywords(text):
     """Checks if any bad words are in the text"""
@@ -53,10 +52,15 @@ def extract_text_from_pdf(file):
 def check_domain_age(url):
     """Figures out how old a website is"""
     try:
-        domain_match = re.search(r'https?://(?:www\.)?([\w\-.]+)', url)
+        # Handle URLs without protocol
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        domain_match = re.search(r'https?://(?:www\.)?([\w\-]+.)', url)
         if not domain_match:
-            return "Invalid URL", 0
+            return "Invalid URL", None
         domain = domain_match.group(1)
+        
         w = whois.whois(domain)
         creation_date = w.creation_date
         
@@ -65,12 +69,12 @@ def check_domain_age(url):
             creation_date = creation_date[0]
             
         if not creation_date:
-            return "Unknown", 0
+            return "Unknown", None
             
         age_days = (datetime.now() - creation_date).days
         return creation_date.strftime('%Y-%m-%d'), age_days
     except Exception:
-        return "Hidden/Error", 0
+        return "Hidden/Error", None
 
 def check_company_reputation(company_name):
     """Googles the company to see if people say it's a scam"""
@@ -85,7 +89,7 @@ def check_company_reputation(company_name):
     return "\n".join(results) if results else "No specific scam reports found."
 
 # ==========================================
-# 3. UI STYLING (From ui/styles.py)
+# 3. UI STYLING
 # ==========================================
 def inject_custom_css():
     st.markdown(f"""
@@ -215,13 +219,16 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered"
 
 # Secure API Key Loading
 api_key = os.getenv("GOOGLE_API_KEY")
+client = None
 
 if api_key:
-    genai.configure(api_key=api_key)
-    # Updated to latest stable model (Gemini 2.5 Flash)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    # Initialize the NEW Google GenAI Client
+    try:
+        client = genai.Client(api_key=api_key)
+    except Exception as e:
+        st.warning(f"Failed to initialize Gemini Client: {e}")
 else:
-    model = None
+    client = None
 
 def main():
     inject_custom_css()
@@ -252,7 +259,10 @@ def main():
         if url_input:
             input_text = f"URL to Analyze: {url_input}"
             reg_date, age = check_domain_age(url_input)
-            if age < 180:
+            
+            if age is None:
+                forensic_context += "⚠️ **Warning:** Could not verify domain age (WHOIS lookup failed or timed out).\n"
+            elif age < 180:
                 forensic_context += f"🚨 **CRITICAL:** Domain is VERY NEW ({age} days old). Real companies usually have older domains.\n"
             else:
                 forensic_context += f"✅ **Domain Trust:** Domain is {age} days old (Created {reg_date}).\n"
@@ -298,13 +308,13 @@ def main():
             st.warning("⚠️ Please provide input in one of the tabs above to start the scan.")
             return
         
-        if not model:
+        if not client:
             st.error("Cannot run scan without API Key.")
             return
 
         with st.spinner("🕵️‍♂️ Analyzing patterns, checking forensics, and consulting security database..."):
             try:
-                prompt = f"""
+                prompt_text = f"""
                 You are 'Sentinel', a Senior Cybersecurity Analyst for a University.
                 
                 MISSION: Analyze this student internship/job lead to detect fraud.
@@ -316,35 +326,62 @@ def main():
                 {forensic_context}
                 
                 --- INSTRUCTIONS ---
-                1. ANALYZE: Check for red flags (urgency, bad grammar, too good to be true, gmail/yahoo domains for businesses).
-                2. VERIFY: Use the provided Forensic Evidence to support your claim.
-                3. EDUCATE: Explain WHY something is suspicious so the student learns.
+                1. **KNOWLEDGE OVERRIDE:** If the input is a widely known, legitimate company (e.g., Google, Microsoft, Amazon) and the URL is correct, declare it **SAFE** immediately, even if the "Forensic Evidence" says WHOIS failed.
+                2. **ANALYZE:** Check for red flags (urgency, bad grammar, "kindly", "wire transfer").
+                3. **VERDICT:** Determine the risk level.
                 
-                --- OUTPUT FORMAT (Markdown) ---
-                ## 🛡️ Analysis Result
-                **Verdict:** [SAFE / SUSPICIOUS / HIGH RISK SCAM]  
+                --- OUTPUT FORMAT ---
+                You must start your response with EXACTLY one of these three lines:
+                VERDICT: SAFE
+                VERDICT: CAUTION
+                VERDICT: SCAM
+                
+                (Leave one empty line)
+                
+                ## 🛡️ Analysis Report
                 **Confidence:** [High/Medium/Low]
                 
-                ### 🚩 Red Flags Detected:
-                * [Bullet point]
-                * [Bullet point] 
+                ### 📝 Summary
+                [1-2 sentences explaining the verdict clearly]
                 
-                ### ℹ️ Forensic Insight:
-                [Discuss the domain age or web reputation if data is available]
+                ### 🚩 Red Flags (If any):
+                * [Point 1]
                 
-                ### 🎓 Expert Recommendation:
-                [Clear, actionable advice. E.g., "Do not pay money," "Verify on LinkedIn"]
+                ### 🎓 Recommendation:
+                [Actionable advice]
                 """
                 
-                response = model.generate_content(prompt)
+                # New Google GenAI API Call Pattern
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash', 
+                    contents=prompt_text
+                )
                 
-                st.markdown(f'<div class="result-box">{response.text}</div>', unsafe_allow_html=True)
+                full_text = response.text
+                
+                # Parse the Verdict
+                lines = full_text.split('\n')
+                verdict_line = lines[0].strip().upper()
+                report_body = "\n".join(lines[1:])
+                
+                # Display Visual Banner
+                if "SAFE" in verdict_line:
+                    st.success("✅ **VERDICT: SAFE**\n\nThis appears to be a legitimate opportunity.")
+                elif "SCAM" in verdict_line:
+                    st.error("🚨 **VERDICT: HIGH RISK SCAM**\n\nDo not interact. This has multiple signs of fraud.")
+                elif "CAUTION" in verdict_line:
+                    st.warning("⚠️ **VERDICT: CAUTION**\n\nSome risks detected. Verify carefully before proceeding.")
+                else:
+                    st.info(f"ℹ️ **VERDICT: UNKNOWN**\n\n{verdict_line}")
+
+                # Display the rest of the report
+                st.markdown(f'<div class="result-box">{report_body}</div>', unsafe_allow_html=True)
                 
             except Exception as e:
                 st.error(f"Scan interrupted. Error: {str(e)}")
                 st.info("Tip: Check your internet connection or API Key.")
 
-    st.markdown("<br><br><div style='text-align: center; opacity: 0.5; font-size: 0.8rem;'>Built for Build4Students Hackathon 2026 • Powered by Gemini</div>", unsafe_allow_html=True)
+    st.markdown("<br><br><div style='text-align: center; opacity: 0.5; font-size: 0.8rem;'>Built for Build4Students Hackathon 2026 • Powered by Gemini 2.0</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
