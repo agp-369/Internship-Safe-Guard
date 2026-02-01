@@ -13,8 +13,14 @@ It's basically a personal cybersecurity analyst.
 3. We check for keywords like "wire transfer" or "kindly".
 4. Then we ask Google's Gemini AI to look at all the evidence and give you a verdict: Safe or Scam.
 
+## Project Structure
+We organized the code to be clean but also easy to deploy.
+
+* **`backend/`**: Contains the core logic and forensic tools.
+* **`ui/`**: Handles the styling and frontend components.
+* **`streamlit/`**: Contains the **deployment-ready** version of the app (all-in-one file for Streamlit Cloud).
+
 ## How to run it locally
-If you want to mess around with the code:
 
 1. **Clone it:**
    ```bash
@@ -33,16 +39,10 @@ If you want to mess around with the code:
    GOOGLE_API_KEY=your_key_here
    ```
 
-4. **Run it:**
+4. **Run the app:**
    ```bash
-   streamlit run app.py
+   streamlit run streamlit/app.py
    ```
-
-## Project Structure
-We kept it simple so it's easy to deploy.
-* `app.py` - The main brain. Run this.
-* `backend/` - The logic (PDF reading, domain checking).
-* `ui/` - Making it look good (CSS, styling).
 
 ## Tech we used
 * Python (obv)
